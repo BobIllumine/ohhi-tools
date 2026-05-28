@@ -12,6 +12,7 @@
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
+#[allow(dead_code)]
 pub struct ThreadPool<I, O>
 where
     I: Send + Sync + 'static,
