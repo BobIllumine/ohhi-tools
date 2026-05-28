@@ -12,18 +12,17 @@ pub trait _Randomizer
 
 impl rand::Fill for Cell {
     fn fill_slice<R: Rng + ?Sized>(this: &mut [Self], rng: &mut R) {
-        for mut cell in this.iter_mut() {
+        for cell in this.iter_mut() {
             let rand_num: u8 = rng.random_range(0..=2);
-            let tmp: Cell;
-            match rand_num {
-                1 => { tmp = Cell::Red; }
-                2 => { tmp = Cell::Blue; }
-                _ => { tmp = Cell::Nothing; }
-            }
-            cell = &mut tmp.clone();
+            *cell = match rand_num {
+                1 => Cell::Red,
+                2 => Cell::Blue,
+                _ => Cell::Nothing,
+            };
         }
     }
 }
+
 
 impl _Randomizer for Line {
     type Output = Line;

@@ -25,6 +25,8 @@ use crate::seed;
 
 /// All mutable application state. Render functions borrow this read-only;
 /// all writes go through [`apply`].
+
+#[allow(dead_code)]
 pub(crate) struct GuiState {
     board: BitBoard,
 
