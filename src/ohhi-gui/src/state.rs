@@ -52,7 +52,15 @@ pub(crate) struct GuiState {
 pub(crate) struct Dialogs {
     pub resize: ResizeDialog,
     pub load_seed: LoadSeedDialog,
+    pub export: ExportDialog,
     pub filter_rules: FilterRulesDialog
+}
+
+/// Export dialog: displays the encoded seed string and offers a copy-to-clipboard button.
+pub(crate) struct ExportDialog {
+    pub open: bool,
+    /// The encoded seed, generated fresh each time the dialog opens.
+    pub seed: String,
 }
 
 /// Inline Resize dialog: text buffers for width and height before Apply.
@@ -98,6 +106,10 @@ impl GuiState {
                     open: false,
                     seed: String::new(),
                     error: None,
+                },
+                export: ExportDialog {
+                    open: false,
+                    seed: String::new(),
                 },
                 filter_rules: FilterRulesDialog {
                     open: false,

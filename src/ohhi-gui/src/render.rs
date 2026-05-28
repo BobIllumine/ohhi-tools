@@ -301,6 +301,36 @@ pub(crate) fn ui_toolbar_bottom(state: &mut GuiState, ui: &mut egui::Ui) {
             space(ui);
             ui.label(egui::RichText::new(text.to_string()).color(egui::Color32::from_rgb(255, 100, 100)));
         }
+        space(ui);
+        if ui.add(btn("Export Seed")).clicked() {
+            let encoded = crate::seed::encode(state.board());
+            state.dialogs().export.seed = encoded;
+            state.dialogs().export.open = !state.dialogs().export.open;
+        }
+        if state.dialogs().export.open {
+            space(ui);
+            ui.vertical_centered(|ui| {
+                // Read-only text area showing the encoded seed.
+                let mut seed = state.dialogs().export.seed.clone();
+                ui.add(
+                    egui::TextEdit::multiline(&mut seed)
+                        .desired_width(width * 0.7)
+                        .desired_rows(4)
+                        .font(egui::TextStyle::Monospace)
+                        .interactive(false)
+                );
+            });
+            space(ui);
+            ui.vertical_centered(|ui| {
+                if ui.add(btn("Copy to clipboard")).clicked() {
+                    ui.ctx().copy_text(state.dialogs().export.seed.clone());
+                }
+                space(ui);
+                if ui.add(btn("Close")).clicked() {
+                    state.dialogs().export.open = false;
+                }
+            });
+        }
     });
 }
 
