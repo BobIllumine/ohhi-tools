@@ -1,0 +1,17 @@
+/target/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# Generated binaries / research output
+*.exe
+*.bin
+data/
+
+# Environment / secrets
+.env

@@ -1,0 +1,12 @@
+[workspace]
+members = ["src/ohhi-core", "src/bruteforcer", "src/ohhi-solver", "src/ohhi-gui"]
+
+[package]
+name = "ohhi-tools"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.10.1"
+ohhi-core = { path = "src/ohhi-core" }
+ohhi-solver = { path = "src/ohhi-solver" }

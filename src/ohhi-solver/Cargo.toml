@@ -1,0 +1,8 @@
+[package]
+name = "ohhi-solver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ohhi-core = { path = "../ohhi-core" }
+rand = "0.10.1"
