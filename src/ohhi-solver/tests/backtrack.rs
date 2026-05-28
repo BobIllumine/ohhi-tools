@@ -37,7 +37,6 @@ fn count_on_ambiguous_seed_returns_at_least_2() {
 }
 
 #[test]
-#[ignore = "FIXME (G.10): backtrack() lacks base case for all-cells-filled; returns None instead of Some(board)"]
 fn backtrack_one_returns_solution_for_unique_seed() {
     let seed = common::bb(&["RRBB", "BBRR", "RBBR", "BRR."]);
     let expected = common::bb(&["RRBB", "BBRR", "RBBR", "BRRB"]);

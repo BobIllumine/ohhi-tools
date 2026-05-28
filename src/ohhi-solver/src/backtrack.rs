@@ -7,6 +7,7 @@
 use ohhi_core::board::{Cell};
 use crate::structs::SolverState;
 use ohhi_core::bit_board::BitBoard;
+use ohhi_core::validator::{Filter, Validator};
 
 /// Recursively counts valid completions of `state`, stopping early once
 /// `cap` solutions are found.
@@ -49,7 +50,17 @@ fn backtrack(state: &mut SolverState) -> Option<BitBoard> {
             }
         }
     }
-    Some(state.board_ref().clone())
+    let filter = Filter {
+        rule_of_3: true,
+        rule_of_equity: true,
+        rule_of_duplication: true,
+        incomplete: true,
+    };
+    if state.board_ref().validate(&filter).is_ok() {
+        Some(state.board_ref().clone())
+    } else {
+        None
+    }
 }
 
 /// Returns the number of valid completions of `board`, stopping at `cap`.

@@ -27,10 +27,6 @@ jobs:
             target: aarch64-apple-darwin
             asset: ohhi-gui-macos-arm64
             ext: ""
-          - os: macos-13
-            target: x86_64-apple-darwin
-            asset: ohhi-gui-macos-x86_64
-            ext: ""
     runs-on: ${{ matrix.os }}
 
     steps:
