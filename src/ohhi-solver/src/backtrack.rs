@@ -7,7 +7,6 @@
 use ohhi_core::board::{Cell};
 use crate::structs::SolverState;
 use ohhi_core::bit_board::BitBoard;
-use ohhi_core::validator::{Filter, Validator};
 
 /// Recursively counts valid completions of `state`, stopping early once
 /// `cap` solutions are found.
@@ -23,8 +22,8 @@ fn count(state: &mut SolverState, cap: usize) -> usize {
             for color in [Cell::Red, Cell::Blue] {
                 if state.place(color, (r, c)) {
                     result += count(state, cap - result);
+                    state.unplace((r, c));
                 }
-                state.unplace((r, c));
                 if result >= cap { return result; }
             }
             return result;
@@ -40,6 +39,10 @@ fn backtrack(state: &mut SolverState) -> Option<BitBoard> {
     for r in 0..state.height {
         for c in 0..state.width {
             if state.board_ref().get((r, c)) != Cell::Nothing { continue; }
+            // First empty cell: try both colors. If neither leads to a full
+            // board, this branch is dead — return immediately rather than
+            // wandering to later cells (which would explore cells out of order
+            // and blow the search up exponentially).
             for color in [Cell::Red, Cell::Blue] {
                 if state.place(color, (r, c)) {
                     if let Some(board) = backtrack(state) {
@@ -48,19 +51,12 @@ fn backtrack(state: &mut SolverState) -> Option<BitBoard> {
                     state.unplace((r, c));
                 }
             }
+            return None;
         }
     }
-    let filter = Filter {
-        rule_of_3: true,
-        rule_of_equity: true,
-        rule_of_duplication: true,
-        incomplete: true,
-    };
-    if state.board_ref().validate(&filter).is_ok() {
-        Some(state.board_ref().clone())
-    } else {
-        None
-    }
+    // No empty cells: the board is full and was built entirely through legal
+    // `place` calls (each enforces all three rules), so it is a valid solution.
+    Some(state.board_ref().clone())
 }
 
 /// Returns the number of valid completions of `board`, stopping at `cap`.

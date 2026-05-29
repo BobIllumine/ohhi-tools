@@ -22,7 +22,7 @@
 //!
 //! **Run the deduction engine:**
 //! ```rust
-//! use ohhi_solver::deduction::{deduce, Technique};
+//! use ohhi_solver::v1::deduction::{deduce, Technique};
 //! // board with one obvious forced cell
 //! // let trace = deduce(&board);
 //! // for step in trace.get_steps() { ... }
@@ -33,8 +33,9 @@
 //! use ohhi_solver::carver::carve;
 //! // let seed = carve(&complete_board).unwrap();
 //! ```
-
+pub use v1::deduction;
 pub mod backtrack;
-pub mod deduction;
 pub mod carver;
 pub mod structs;
+pub mod v1;
+pub mod v2;

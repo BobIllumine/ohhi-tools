@@ -2219,12 +2219,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ohhi-data"
+version = "0.1.0"
+
+[[package]]
+name = "ohhi-generator"
+version = "0.1.0"
+dependencies = [
+ "ohhi-core",
+ "ohhi-solver",
+ "rand",
+]
+
+[[package]]
 name = "ohhi-gui"
 version = "0.1.0"
 dependencies = [
  "eframe",
  "ohhi-core",
+ "ohhi-generator",
  "ohhi-solver",
+ "rand",
 ]
 
 [[package]]

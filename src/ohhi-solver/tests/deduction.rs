@@ -1,7 +1,7 @@
 mod common;
 
 use ohhi_core::board::Cell;
-use ohhi_solver::deduction::{deduce, deduce_with, Technique, TechniqueSet};
+use ohhi_solver::v1::deduction::{deduce, deduce_with, Technique, TechniqueSet};
 
 // ── PairExtension ─────────────────────────────────────────────────────────────
 

@@ -27,7 +27,7 @@ fn main() {
     let num_workers = thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
     let func = |(board, filter): &(BitBoard, Filter)| board.validate(filter);
     let tp = ThreadPool::new(num_workers, func);
-    let n = 4;
+    let n = 6;
     let mut input = vec![vec![Cell::Nothing; n]; n];
     create_and_submit(&mut input, 0, &tp, Filter {
         rule_of_3: true,
