@@ -144,7 +144,7 @@ fn breakdown_n4_mostly_deduction_solvable() {
 fn breakdown_quality_mostly_above_60_percent_n4() {
     let mut rng = SmallRng::seed_from_u64(7);
     let total = 200usize;
-    let total_cells = 4 * 4;
+    let _total_cells = 4 * 4;
     let threshold = 0.60_f64;
     let mut passes = 0usize;
     for _ in 0..total {

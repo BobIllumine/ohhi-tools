@@ -25,7 +25,7 @@ use crate::seed;
 
 /// Which full-board constructor to use during generation.
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub(crate) enum Constructor {
+pub enum Constructor {
     /// Faithful port of the game's `generateFast` (combo-pool shuffle + row fill).
     Og,
     /// Randomized DFS sandbox.
@@ -34,7 +34,7 @@ pub(crate) enum Constructor {
 
 /// Which reducer to use during generation.
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub(crate) enum Reducer {
+pub enum Reducer {
     /// Faithful deduction-only `breakDown` — game-accurate quality gate.
     Breakdown,
     /// Count-based minimal seed (uniqueness, guessing allowed).

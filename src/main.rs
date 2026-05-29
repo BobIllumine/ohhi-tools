@@ -1,6 +1,5 @@
 use std::time::Instant;
 use ohhi_core::bit_board;
-use ohhi_solver::deduction;
 use ohhi_solver::backtrack;
 
 fn main() {
