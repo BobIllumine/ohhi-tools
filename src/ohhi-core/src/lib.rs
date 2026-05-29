@@ -22,11 +22,9 @@
 //! | [`validator`] | Checks a [`BitBoard`](bit_board::BitBoard) against any subset of the three rules via [`Validator::validate`](validator::Validator::validate). |
 //! | [`board`] | Legacy `Board`/`Line` types (mostly superseded by `BitBoard`). Still home to the [`Cell`](board::Cell) enum used throughout the crate. |
 //! | [`visualizer`] | `Display` impl for `BitBoard` that pretty-prints the grid. |
-//! | [`randomizer`] | Stub — not yet used by the live path. |
 
 pub mod board;
 pub mod visualizer;
 pub mod validator;
-pub mod randomizer;
 pub mod stats;
 pub mod bit_board;

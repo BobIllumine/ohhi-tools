@@ -29,10 +29,10 @@
 //!   status, per-technique tally, and the step scrub slider.
 
 use eframe::egui;
-use crate::state::{apply, GuiState};
+use crate::state::{apply, Constructor, GuiState, Reducer};
 use ohhi_core::board::{Cell, BOARD_MAX_SIZE};
 use ohhi_core::stats::NumTransforms;
-use ohhi_solver::deduction::Technique;
+use ohhi_solver::v1::deduction::Technique;
 const PADDING: f32 = 0.7;
 
 fn technique_color(t: Technique) -> egui::Color32 {
@@ -331,6 +331,79 @@ pub(crate) fn ui_toolbar_bottom(state: &mut GuiState, ui: &mut egui::Ui) {
                 }
             });
         }
+
+        space(ui);
+        if ui.add(btn("Generate")).clicked() {
+            state.dialogs().generate.open = !state.dialogs().generate.open;
+        }
+        if state.dialogs().generate.open {
+            space(ui);
+            ui.vertical_centered(|ui| {
+                ui.label("Board size N");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.dialogs().generate.size_buf)
+                        .desired_width(width * 0.4)
+                );
+                ui.label("RNG seed (blank = random)");
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.dialogs().generate.seed_buf)
+                        .desired_width(width * 0.4)
+                );
+            });
+            space(ui);
+            ui.vertical_centered(|ui| {
+                ui.label("Constructor");
+                ui.radio_value(&mut state.dialogs().generate.constructor, Constructor::Og, "OG (game-faithful)");
+                ui.radio_value(&mut state.dialogs().generate.constructor, Constructor::Toolkit, "Ours (sandbox)");
+                space(ui);
+                ui.label("Reducer");
+                ui.radio_value(&mut state.dialogs().generate.reducer, Reducer::Breakdown, "Breakdown (deduction-only)");
+                ui.radio_value(&mut state.dialogs().generate.reducer, Reducer::Carve, "Carve (uniqueness-minimal)");
+            });
+            space(ui);
+            ui.vertical_centered(|ui| {
+                if ui.add(btn("Generate!")).clicked() {
+                    let n_result: Result<usize, _> = state.dialogs().generate.size_buf.parse();
+                    let seed_opt: Option<u64> = if state.dialogs().generate.seed_buf.is_empty() {
+                        None
+                    } else {
+                        state.dialogs().generate.seed_buf.parse().ok()
+                    };
+                    match n_result {
+                        Ok(n) => {
+                            let constructor = state.dialogs().generate.constructor;
+                            let reducer = state.dialogs().generate.reducer;
+                            match apply(state, crate::state::Action::Generate { n, constructor, reducer, seed: seed_opt }) {
+                                Ok(()) => {
+                                    state.dialogs().generate.open = false;
+                                    state.dialogs().generate.error = None;
+                                }
+                                Err(e) => {
+                                    state.dialogs().generate.error = Some(e.0);
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            state.dialogs().generate.error = Some("N must be a number".to_string());
+                        }
+                    }
+                }
+                space(ui);
+                if ui.add(btn("Cancel")).clicked() {
+                    state.dialogs().generate.open = false;
+                    state.dialogs().generate.error = None;
+                }
+            });
+            if let Some(q) = state.dialogs().generate.last_quality {
+                space(ui);
+                ui.label(egui::RichText::new(format!("Last: {:.0}% empty", q * 100.0))
+                    .color(egui::Color32::from_gray(180)));
+            }
+            if let Some(err) = state.dialogs().generate.error.clone() {
+                space(ui);
+                ui.label(egui::RichText::new(err).color(egui::Color32::from_rgb(255, 100, 100)));
+            }
+        }
     });
 }
 
@@ -393,6 +466,12 @@ pub(crate) fn ui_solution_panel(state: &mut GuiState, ui: &mut egui::Ui) {
             });
         }
 
+        if state.last_solve().is_some() {
+            space(ui);
+            if ui.add(btn("Reveal solution")).clicked() {
+                let _ = apply(state, crate::state::Action::RevealSolution);
+            }
+        }
         space(ui);
         ui.separator();
         ui.heading("Deduction");
@@ -452,7 +531,15 @@ pub(crate) fn ui_solution_panel(state: &mut GuiState, ui: &mut egui::Ui) {
             ui.label(format!("Saturation: {}", tally[Technique::Saturation as usize]));
             ui.label(format!("Twin: {}", tally[Technique::TwinCompletion as usize]));
             space(ui);
-            ui.add(egui::Slider::new(state.overlay_step_mut(), 0..=total).text("step"));
+            ui.horizontal(|ui| {
+                if ui.button("‹").clicked() && *state.overlay_step_mut() > 0 {
+                    *state.overlay_step_mut() -= 1;
+                }
+                ui.add(egui::Slider::new(state.overlay_step_mut(), 0..=total).text("step"));
+                if ui.button("›").clicked() && *state.overlay_step_mut() < total {
+                    *state.overlay_step_mut() += 1;
+                }
+            });
         }
     });
 }

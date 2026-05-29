@@ -73,7 +73,7 @@ fn brute_and_backtracker_agree_on_4x4() {
 
 #[test]
 fn deduce_completion_matches_backtracker_on_unique_seeds() {
-    use ohhi_solver::deduction::deduce;
+    use ohhi_solver::v1::deduction::deduce;
 
     // Hand-built unique 4×4 seeds: one empty cell each, all have exactly one
     // valid completion.

@@ -314,13 +314,13 @@ fn find_forced(state: &SolverState, enabled: TechniqueSet) -> Option<(usize, usi
             }
         }
         if enabled.contains(Technique::TwinCompletion) {
+            // Only call with the red mask. completed_rows/cols store red masks, so
+            // twin_completion(blue, ...) would compare blue-derived values against red
+            // masks — accidental collisions produce false-positive forced-Red placements.
+            // The red arm covers both empties; Saturation forces the remaining Red after.
             let forced_blue = twin_completion(red, filled, width_mask, false);
             if forced_blue != usize::MAX {
                 return Some((r, forced_blue, Cell::Blue, Technique::TwinCompletion));
-            }
-            let forced_red = twin_completion(blue, filled, width_mask, false);
-            if forced_red != usize::MAX {
-                return Some((r, forced_red, Cell::Red, Technique::TwinCompletion));
             }
         }
     }
@@ -363,10 +363,6 @@ fn find_forced(state: &SolverState, enabled: TechniqueSet) -> Option<(usize, usi
             let forced_blue = twin_completion(red, filled, height_mask, true);
             if forced_blue != usize::MAX {
                 return Some((forced_blue, c, Cell::Blue, Technique::TwinCompletion));
-            }
-            let forced_red = twin_completion(blue, filled, height_mask, true);
-            if forced_red != usize::MAX {
-                return Some((forced_red, c, Cell::Red, Technique::TwinCompletion));
             }
         }
     }

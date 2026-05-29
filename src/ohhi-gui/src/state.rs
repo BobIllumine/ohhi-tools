@@ -20,8 +20,26 @@
 use ohhi_core::bit_board::BitBoard;
 use ohhi_core::board::Cell;
 use ohhi_core::validator::{Filter, Rule, Validator, Violation};
-use ohhi_solver::deduction::{deduce_with, DeductionTrace, Technique, TechniqueSet};
+use ohhi_solver::v1::deduction::{deduce_with, DeductionTrace, Technique, TechniqueSet};
 use crate::seed;
+
+/// Which full-board constructor to use during generation.
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Constructor {
+    /// Faithful port of the game's `generateFast` (combo-pool shuffle + row fill).
+    Og,
+    /// Randomized DFS sandbox.
+    Toolkit,
+}
+
+/// Which reducer to use during generation.
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Reducer {
+    /// Faithful deduction-only `breakDown` — game-accurate quality gate.
+    Breakdown,
+    /// Count-based minimal seed (uniqueness, guessing allowed).
+    Carve,
+}
 
 /// All mutable application state. Render functions borrow this read-only;
 /// all writes go through [`apply`].
@@ -55,7 +73,25 @@ pub(crate) struct Dialogs {
     pub resize: ResizeDialog,
     pub load_seed: LoadSeedDialog,
     pub export: ExportDialog,
-    pub filter_rules: FilterRulesDialog
+    pub filter_rules: FilterRulesDialog,
+    pub generate: GenerateDialog,
+}
+
+/// Generate dialog: controls for the two-phase board generator.
+pub(crate) struct GenerateDialog {
+    pub open: bool,
+    /// Board size N (must be even, ≤ BOARD_MAX_SIZE). Buffer for text input.
+    pub size_buf: String,
+    /// Optional RNG seed. Empty string = random.
+    pub seed_buf: String,
+    /// Which full-board constructor to use.
+    pub constructor: Constructor,
+    /// Which reducer to use.
+    pub reducer: Reducer,
+    /// Quality fraction of the last generated puzzle, for display.
+    pub last_quality: Option<f64>,
+    /// Error from the last generation attempt, if any.
+    pub error: Option<String>,
 }
 
 /// Export dialog: displays the encoded seed string and offers a copy-to-clipboard button.
@@ -121,9 +157,22 @@ impl GuiState {
                         rule_of_duplication: true,
                         incomplete: true
                     }),
-                }
+                },
+                generate: GenerateDialog {
+                    open: false,
+                    size_buf: String::from("6"),
+                    seed_buf: String::new(),
+                    constructor: Constructor::Og,
+                    reducer: Reducer::Breakdown,
+                    last_quality: None,
+                    error: None,
+                },
             }
         }
+    }
+
+    pub fn last_solve(&self) -> Option<&BitBoard> {
+        self.last_solve.as_ref()
     }
     pub fn dims(&self) -> (usize, usize) {
         (self.board.width(), self.board.height())
@@ -218,6 +267,22 @@ pub enum Action {
     /// Returns `Err(AppError)` if the string cannot be parsed. The seed format
     /// is `R`/`B`/`.` separated by spaces within rows, rows separated by newlines.
     LoadSeed(String),
+
+    /// Generate a puzzle and replace the board with it. **↩ history**
+    ///
+    /// Runs the two-phase generator with the given constructor, reducer, and optional
+    /// RNG seed. The full solution is stashed in `last_solve` for later reveal.
+    Generate {
+        n: usize,
+        constructor: Constructor,
+        reducer: Reducer,
+        seed: Option<u64>,
+    },
+
+    /// Replace the board with the full solution from the last `Generate`. **↩ history**
+    ///
+    /// Does nothing if no generation has been performed.
+    RevealSolution,
 }
 
 /// A human-readable error message from [`apply`]. Displayed in the UI.
@@ -303,6 +368,63 @@ pub(crate) fn apply(state: &mut GuiState, action: Action) -> Result<(), AppError
         Action::Validate => {
             let filter = state.dialogs.filter_rules.filter;
             state.last_validation = Some(state.board.validate(&filter));
+        }
+        Action::Generate { n, constructor, reducer, seed } => {
+            use ohhi_generator::full::og::OgGenerator;
+            use ohhi_generator::full::toolkit::ToolkitGenerator;
+            use ohhi_generator::reduce::breakdown;
+            use ohhi_generator::generate_puzzle;
+            use ohhi_solver::carver::carve;
+            use rand::rngs::SmallRng;
+            use rand::SeedableRng;
+
+            if n == 0 || n % 2 != 0 || n > ohhi_core::board::BOARD_MAX_SIZE as usize {
+                return Err(AppError(format!(
+                    "N must be even and between 2 and {}: got {n}",
+                    ohhi_core::board::BOARD_MAX_SIZE
+                )));
+            }
+
+            let mut rng: SmallRng = match seed {
+                Some(s) => SmallRng::seed_from_u64(s),
+                None => SmallRng::seed_from_u64(rand::random()),
+            };
+
+            let carve_adapter = |full: &ohhi_core::bit_board::BitBoard, _rng: &mut SmallRng| {
+                match carve(full) {
+                    Ok(puzzle) => {
+                        let empties = (0..full.height())
+                            .flat_map(|r| (0..full.width()).map(move |c| (r, c)))
+                            .filter(|&pos| puzzle.get(pos) == ohhi_core::board::Cell::Nothing)
+                            .count();
+                        (puzzle, empties)
+                    }
+                    Err(_) => (full.clone(), 0),
+                }
+            };
+
+            let puzzle = match (constructor, reducer) {
+                (Constructor::Og, Reducer::Breakdown) =>
+                    generate_puzzle(&OgGenerator, n, &mut rng, breakdown),
+                (Constructor::Og, Reducer::Carve) =>
+                    generate_puzzle(&OgGenerator, n, &mut rng, carve_adapter),
+                (Constructor::Toolkit, Reducer::Breakdown) =>
+                    generate_puzzle(&ToolkitGenerator, n, &mut rng, breakdown),
+                (Constructor::Toolkit, Reducer::Carve) =>
+                    generate_puzzle(&ToolkitGenerator, n, &mut rng, carve_adapter),
+            };
+
+            state.history.push(state.board.clone());
+            state.board = puzzle.puzzle;
+            state.last_solve = Some(puzzle.full);
+            state.dialogs.generate.last_quality = Some(puzzle.quality);
+            state.dialogs.generate.error = None;
+        }
+        Action::RevealSolution => {
+            if let Some(full) = state.last_solve.clone() {
+                state.history.push(state.board.clone());
+                state.board = full;
+            }
         }
         _ => {}
     }

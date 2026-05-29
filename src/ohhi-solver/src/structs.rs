@@ -26,50 +26,74 @@ pub struct SolverState {
 }
 
 impl SolverState {
+    
+    /// Scans the board for completed rows and columns to saturate `completed_rows` and `completed_cols` correctly.
+    /// May slow down some solver functions as a result, but it is a necessary fix and the overhead is not as crucial
     pub fn new(board: &BitBoard) -> SolverState {
         let board = board.clone();
+        let mut completed_rows = HashSet::new();
+        let mut completed_cols = HashSet::new();
+        for r in 0..board.height() {
+            if board.is_complete_x(&r) {
+                completed_rows.insert(board.signature_x(&r));
+            }
+        }
+        for c in 0..board.width() {
+            if board.is_complete_y(&c) {
+                completed_cols.insert(board.signature_y(&c));
+            }
+        }
         SolverState {
             width: board.width(),
             height: board.height(),
-            completed_rows: HashSet::new(),
-            completed_cols: HashSet::new(),
+            completed_rows,
+            completed_cols,
             board
         }
     }
 
     /// Places `color` at `(r, c)` and checks all three rules.
     ///
-    /// Returns `true` if the placement is legal, `false` if it violates any
-    /// rule. When `false` is returned the cell has already been set — the
-    /// caller **must** call `unplace` before continuing.
+    /// Returns `true` if the placement is legal. On `false` the placement is
+    /// fully rolled back — the cell is cleared and the completed-line
+    /// bookkeeping is left exactly as it was before the call — so the caller
+    /// must **not** call `unplace` after a `false` return.
     pub fn place(&mut self, color: Cell, (r, c): (usize, usize)) -> bool {
         self.board.set((r, c), color);
         let (red_x, blue_x) = self.board.count_x(&r);
         let (red_y, blue_y) = self.board.count_y(&c);
-        match color {
-            Cell::Red => if red_x as usize > self.width / 2 || red_y as usize > self.height / 2 {
-                return false;
-            }
-            Cell::Blue => if blue_x as usize > self.width / 2 || blue_y as usize > self.height / 2 {
-                return false;
-            }
-            _ => {}
-        }
-        if self.board.has_consecutive_x(&r, 3) {
+        let equity_ok = match color {
+            Cell::Red => red_x as usize <= self.width / 2 && red_y as usize <= self.height / 2,
+            Cell::Blue => blue_x as usize <= self.width / 2 && blue_y as usize <= self.height / 2,
+            _ => true,
+        };
+        if !equity_ok
+            || self.board.has_consecutive_x(&r, 3)
+            || self.board.has_consecutive_y(&c, 3)
+        {
+            self.board.set((r, c), Cell::Nothing);
             return false;
         }
-        if self.board.has_consecutive_y(&c, 3) {
-            return false;
-        }
+        // Uniqueness: register completed-line signatures, rolling everything
+        // back (including the cell) if either line duplicates an existing one.
+        // completed_rows/cols are keyed by signature *value*, so a transient
+        // duplicate must never be left registered — otherwise a later `unplace`
+        // would remove the shared key and silently disarm the duplicate guard.
+        let mut inserted_row = false;
         if self.board.is_complete_x(&r) {
-            if !self.completed_rows.insert(self.board.signature_x(&r)) {
+            if self.completed_rows.insert(self.board.signature_x(&r)) {
+                inserted_row = true;
+            } else {
+                self.board.set((r, c), Cell::Nothing);
                 return false;
             }
         }
-        if self.board.is_complete_y(&c) {
-            if !self.completed_cols.insert(self.board.signature_y(&c)) {
-                return false;
+        if self.board.is_complete_y(&c) && !self.completed_cols.insert(self.board.signature_y(&c)) {
+            if inserted_row {
+                self.completed_rows.remove(&self.board.signature_x(&r));
             }
+            self.board.set((r, c), Cell::Nothing);
+            return false;
         }
         true
     }
