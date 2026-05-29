@@ -2221,6 +2221,12 @@ dependencies = [
 [[package]]
 name = "ohhi-data"
 version = "0.1.0"
+dependencies = [
+ "ohhi-core",
+ "ohhi-generator",
+ "ohhi-solver",
+ "rand",
+]
 
 [[package]]
 name = "ohhi-generator"
