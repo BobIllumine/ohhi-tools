@@ -1,11 +1,14 @@
 [package]
-name = "ohhi-gui"
+name = "ohhi-app"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-eframe = "0.34.2"
 ohhi-core = { path = "../ohhi-core" }
 ohhi-solver = { path = "../ohhi-solver" }
 ohhi-generator = { path = "../ohhi-generator" }
+ohhi-data = { path = "../ohhi-data" }
 rand = "0.10.1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.4", features = ["wasm_js"] }

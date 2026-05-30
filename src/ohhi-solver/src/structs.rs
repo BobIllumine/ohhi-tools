@@ -180,7 +180,7 @@ pub enum Technique {
 /// Bit `i` corresponds to the `Technique` variant whose discriminant equals
 /// `i` (i.e. `PairExtension=0`, `GapFill=1`, `Saturation=2`,
 /// `TwinCompletion=3`). This ordering is load-bearing.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TechniqueSet(u8);
 
 impl TechniqueSet {

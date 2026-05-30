@@ -18,28 +18,18 @@
 //! B . R .
 //! . B . R
 //! ```
-//!
-//! # Known issue
-//!
-//! `encode` delegates to `BitBoard`'s `Display` impl, which in turn uses
-//! `Cell`'s `Display` impl. That impl currently has `Red` and `Blue` swapped
-//! (`Red` → `"B"`, `Blue` → `"R"`), so `encode` produces wrong output.
-//! `parse` is correct. Round-tripping through encode + parse will flip all
-//! colors.
 
-use ohhi_core::bit_board::BitBoard;
-use ohhi_core::board::{Cell, BOARD_MAX_SIZE};
+use crate::bit_board::BitBoard;
+use crate::board::{Cell, BOARD_MAX_SIZE};
 
 /// Encodes `board` as a seed string (space-delimited `R`/`B`/`.` per row,
 /// newline-delimited rows).
-///
-/// **Warning**: see module-level note — `Cell`'s `Display` impl has Red and
-/// Blue swapped, so the output of this function currently has the wrong colors.
 pub fn encode(board: &BitBoard) -> String {
     board.to_string()
 }
 
 /// A seed parse error with a human-readable message.
+#[derive(Debug)]
 pub struct SeedError(pub String);
 
 /// Parses a seed string into a `BitBoard`. See the module-level docs for the

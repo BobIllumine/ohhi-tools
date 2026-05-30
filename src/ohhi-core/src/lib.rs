@@ -28,3 +28,4 @@ pub mod visualizer;
 pub mod validator;
 pub mod stats;
 pub mod bit_board;
+pub mod seed;
