@@ -12,6 +12,9 @@ pub struct BoardProps {
     pub board: BitBoard,
     #[props(default)]
     pub locked: Option<BitBoard>,
+    /// Cells to draw with a gold highlight outline (any non-`Nothing` position).
+    #[props(default)]
+    pub outline: Option<BitBoard>,
     #[props(default)]
     pub overlay: Option<Trace>,
     #[props(default)]
@@ -48,23 +51,26 @@ pub fn Board(props: BoardProps) -> Element {
                 // Board grid
                 div {
                     style: "display: grid; grid-template-columns: repeat({n_cols}, {CELL}px); gap: {GAP}px;",
-                    for r in 0..n_rows {
-                        for c in 0..n_cols {
-                            {
-                                let f = forced.iter().find(|(fr, fc, _, _)| *fr == r && *fc == c)
-                                    .map(|(_, _, color, label)| (*color, *label));
-                                rsx! {
-                                    CellView {
-                                        key: "{r}-{c}",
-                                        r, c,
-                                        cell: board.get((r, c)),
-                                        locked: props.locked.as_ref()
-                                            .map(|lb| lb.get((r, c)) != Cell::Nothing)
-                                            .unwrap_or(false),
-                                        forced: f,
-                                        on_click: props.on_cell_click.clone(),
-                                        on_right_click: props.on_right_click.clone(),
-                                    }
+                    for idx in 0..n_rows * n_cols {
+                        {
+                            let r = idx / n_cols;
+                            let c = idx % n_cols;
+                            let f = forced.iter().find(|(fr, fc, _, _)| *fr == r && *fc == c)
+                                .map(|(_, _, color, label)| (*color, *label));
+                            rsx! {
+                                CellView {
+                                    key: "{r}-{c}",
+                                    r, c,
+                                    cell: board.get((r, c)),
+                                    locked: props.locked.as_ref()
+                                        .map(|lb| lb.get((r, c)) != Cell::Nothing)
+                                        .unwrap_or(false),
+                                    outlined: props.outline.as_ref()
+                                        .map(|ob| ob.get((r, c)) != Cell::Nothing)
+                                        .unwrap_or(false),
+                                    forced: f,
+                                    on_click: props.on_cell_click.clone(),
+                                    on_right_click: props.on_right_click.clone(),
                                 }
                             }
                         }
@@ -181,6 +187,9 @@ struct CellViewProps {
     c: usize,
     cell: Cell,
     locked: bool,
+    /// Draw a gold highlight outline around this cell (e.g. a forced deduction).
+    #[props(default)]
+    outlined: bool,
     /// When `Some`, the cell is part of the overlay: (forced color, technique label).
     forced: Option<(Cell, &'static str)>,
     on_click: EventHandler<(usize, usize)>,
@@ -198,7 +207,7 @@ fn CellView(props: CellViewProps) -> Element {
     let display_cell = props.forced.map(|(col, _)| col).unwrap_or(props.cell);
 
     let bg = cell_bg(display_cell, locked);
-    let outline = if props.forced.is_some() {
+    let outline = if props.forced.is_some() || props.outlined {
         "2px solid #f0c040"
     } else if locked {
         "2px solid #484848"

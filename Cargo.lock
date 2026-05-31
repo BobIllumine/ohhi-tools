@@ -2885,6 +2885,7 @@ dependencies = [
  "ohhi-generator",
  "ohhi-solver",
  "rand 0.10.1",
+ "serde",
 ]
 
 [[package]]
@@ -2912,6 +2913,7 @@ dependencies = [
  "ohhi-core",
  "ohhi-solver",
  "rand 0.10.1",
+ "serde",
 ]
 
 [[package]]
@@ -2939,7 +2941,9 @@ dependencies = [
  "getrandom 0.4.2",
  "ohhi-app",
  "ohhi-core",
+ "ohhi-data",
  "ohhi-solver",
+ "serde_json",
  "tokio",
 ]
 

@@ -132,6 +132,14 @@ pub enum AnalysisAction {
 #[derive(Debug)]
 pub struct AppError(pub String);
 
+/// Discard any deduction overlay. Call this whenever the board is replaced
+/// wholesale (load/generate/resize/clear/reveal): the overlay's steps reference
+/// positions on the *previous* board and are meaningless against the new one.
+fn clear_overlay(state: &mut AnalysisSession) {
+    state.overlay = None;
+    state.overlay_step = 0;
+}
+
 /// Apply an action to the session, returning `Ok(())` or `Err(AppError)`.
 pub fn apply(state: &mut AnalysisSession, action: AnalysisAction) -> Result<(), AppError> {
     match action {
@@ -149,11 +157,13 @@ pub fn apply(state: &mut AnalysisSession, action: AnalysisAction) -> Result<(), 
             state.history.push(state.board.clone());
             state.redo_stack.clear();
             state.board = BitBoard::new(state.board.width(), state.board.height());
+            clear_overlay(state);
         }
         AnalysisAction::Resize(w, h) => {
             state.history.push(state.board.clone());
             state.redo_stack.clear();
             state.board = BitBoard::new(w, h);
+            clear_overlay(state);
         }
         AnalysisAction::Undo => {
             if let Some(board) = state.history.pop() {
@@ -171,7 +181,10 @@ pub fn apply(state: &mut AnalysisSession, action: AnalysisAction) -> Result<(), 
             state.history.push(state.board.clone());
             state.redo_stack.clear();
             match seed::parse(&s) {
-                Ok(board) => state.board = board,
+                Ok(board) => {
+                    state.board = board;
+                    clear_overlay(state);
+                }
                 Err(e) => {
                     state.history.pop();
                     return Err(AppError(format!("Failed to parse seed: {}", e.0)));
@@ -274,12 +287,14 @@ pub fn apply(state: &mut AnalysisSession, action: AnalysisAction) -> Result<(), 
             state.board = puzzle.puzzle;
             state.last_solve = Some(puzzle.full);
             state.last_quality = Some(puzzle.quality);
+            clear_overlay(state);
         }
         AnalysisAction::RevealSolution => {
             if let Some(full) = state.last_solve.clone() {
                 state.history.push(state.board.clone());
                 state.redo_stack.clear();
                 state.board = full;
+                clear_overlay(state);
             }
         }
     }

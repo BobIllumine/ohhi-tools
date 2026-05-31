@@ -2,8 +2,12 @@ use dioxus::prelude::*;
 use ohhi_app::{AppState, Screen};
 
 mod components;
+mod storage;
 use components::analysis::AnalysisView;
 use components::play::PlayView;
+use components::patterns::PatternsView;
+use components::practice::PracticeView;
+use components::stats::StatsView;
 
 fn main() {
     dioxus::launch(App);
@@ -11,7 +15,16 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let mut state = use_signal(AppState::new);
+    let mut state = use_signal(|| {
+        let mut s = AppState::new();
+        s.practice_history = storage::load();
+        s
+    });
+    // Light mode for outdoor / bright-sun use. The whole UI is styled dark with
+    // hardcoded colours, so rather than re-theme every component we invert the
+    // root; hue-rotate(180) keeps red/blue cells roughly their original hue.
+    let mut light = use_signal(|| false);
+    let root_filter = if light() { "filter: invert(1) hue-rotate(180deg);" } else { "" };
 
     rsx! {
         style { r#"
@@ -41,7 +54,7 @@ fn App() -> Element {
         "# }
 
         div {
-            style: "display: flex; flex-direction: column; width: 100vw; height: 100vh;",
+            style: "display: flex; flex-direction: column; width: 100vw; height: 100vh; background: #1e1e1e; {root_filter}",
 
             // Top tab bar
             div {
@@ -51,6 +64,14 @@ fn App() -> Element {
                 Tab { label: "Play",     screen: Screen::Play,     current: state.read().screen.clone(), onclick: move |_| state.write().screen = Screen::Play }
                 Tab { label: "Practice", screen: Screen::Practice, current: state.read().screen.clone(), onclick: move |_| state.write().screen = Screen::Practice }
                 Tab { label: "Patterns", screen: Screen::Patterns, current: state.read().screen.clone(), onclick: move |_| state.write().screen = Screen::Patterns }
+                Tab { label: "Stats",    screen: Screen::Stats,    current: state.read().screen.clone(), onclick: move |_| state.write().screen = Screen::Stats }
+                // Push the theme toggle to the far right.
+                div { style: "flex: 1;" }
+                button {
+                    style: "padding: 5px 12px; border-radius: 6px; border: 1px solid #404040; background: #2a2a2a; color: #e8e8e8;",
+                    onclick: move |_| { let v = light(); light.set(!v); },
+                    if light() { "🌙 Dark" } else { "☀ Light" }
+                }
             }
 
             div {
@@ -58,8 +79,9 @@ fn App() -> Element {
                 match state.read().screen {
                     Screen::Analysis => rsx! { AnalysisView { state } },
                     Screen::Play     => rsx! { PlayView { state } },
-                    Screen::Practice => rsx! { Placeholder { title: "Practice mode" } },
-                    Screen::Patterns => rsx! { Placeholder { title: "Patterns" } },
+                    Screen::Practice => rsx! { PracticeView { state } },
+                    Screen::Patterns => rsx! { PatternsView {} },
+                    Screen::Stats    => rsx! { StatsView { state } },
                 }
             }
         }

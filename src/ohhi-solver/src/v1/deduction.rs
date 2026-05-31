@@ -374,6 +374,107 @@ pub fn deduce(board: &BitBoard) -> DeductionTrace {
     deduce_with(board, TechniqueSet::ALL)
 }
 
+/// Returns **every** cell the enabled techniques force on `board` in a single,
+/// **non-cascading** pass — nothing is applied, so later deductions that would
+/// only become available after placing an earlier one are not reported.
+///
+/// Unlike [`deduce_with`] (which runs to fixpoint and returns one cell per
+/// step), this answers "what can technique `T` recognise on the board right
+/// now?" — the basis for Practice-mode scoring (any forced cell is a valid
+/// answer) and its targeted generator. Results are deduped by position,
+/// ascending (row-major).
+pub fn forced_once(board: &BitBoard, set: TechniqueSet) -> Vec<(usize, usize, Cell, Technique)> {
+    let state = SolverState::new(board);
+    let mut seen = std::collections::HashSet::new();
+    let mut out: Vec<(usize, usize, Cell, Technique)> = Vec::new();
+
+    let mut push = |r: usize, c: usize, cell: Cell, t: Technique| {
+        if seen.insert((r, c)) {
+            out.push((r, c, cell, t));
+        }
+    };
+    let all_bits = |mut m: u16, mut f: &mut dyn FnMut(usize)| {
+        while m != 0 {
+            let i = m.trailing_zeros() as usize;
+            f(i);
+            m &= m - 1;
+        }
+    };
+
+    // `selection` is one colour's mask; the cells it forces take the OPPOSITE
+    // colour. row==true addresses (line, pos); else (pos, line).
+    let mut scan_line = |selection: u16, opp_selection: u16, filled: u16, mask: u16,
+                         line: usize, is_row: bool, is_col_metric: bool,
+                         out_push: &mut dyn FnMut(usize, Cell, Technique)| {
+        if set.contains(Technique::PairExtension) {
+            for (sel, opp) in [(selection, Cell::Blue), (opp_selection, Cell::Red)] {
+                let pairs = sel & (sel >> 1);
+                let forced = ((pairs >> 1) | (pairs << 2)) & mask & !filled;
+                all_bits(forced, &mut |i| out_push(i, opp, Technique::PairExtension));
+            }
+        }
+        if set.contains(Technique::GapFill) {
+            for (sel, opp) in [(selection, Cell::Blue), (opp_selection, Cell::Red)] {
+                let gaps = sel & (sel >> 2);
+                let forced = (gaps << 1) & mask & !filled;
+                all_bits(forced, &mut |i| out_push(i, opp, Technique::GapFill));
+            }
+        }
+        if set.contains(Technique::Saturation) {
+            let half = if is_col_metric { state.height as u32 / 2 } else { state.width as u32 / 2 };
+            // A colour at exactly half forces every remaining empty to the other colour.
+            if selection.count_ones() == half {
+                all_bits(mask & !filled, &mut |i| out_push(i, Cell::Blue, Technique::Saturation));
+            }
+            if opp_selection.count_ones() == half {
+                all_bits(mask & !filled, &mut |i| out_push(i, Cell::Red, Technique::Saturation));
+            }
+        }
+        if set.contains(Technique::TwinCompletion) {
+            // Red-mask arm only (completed-line sets store red masks); mirrors deduce_with.
+            let empties = mask & !filled;
+            if empties.count_ones() == 2 {
+                let e1 = empties.trailing_zeros() as usize;
+                let e2 = (empties & (empties - 1)).trailing_zeros() as usize;
+                let cand_a = selection | (1 << e1);
+                let cand_b = selection | (1 << e2);
+                let completed = if is_col_metric { state.completed_cols() } else { state.completed_rows() };
+                let (ta, tb) = (completed.contains(&cand_a), completed.contains(&cand_b));
+                // A twin pins BOTH empties at once: if "e1=Red" duplicates a
+                // completed line, the only legal completion is e1=Blue, e2=Red
+                // (and vice-versa). deduce_with reports only the Blue cell and
+                // lets saturation mop up the Red one on the next pass; here we
+                // report both, so Practice accepts either cell as a twin answer.
+                if ta && !tb {
+                    out_push(e1, Cell::Blue, Technique::TwinCompletion);
+                    out_push(e2, Cell::Red, Technique::TwinCompletion);
+                }
+                if tb && !ta {
+                    out_push(e2, Cell::Blue, Technique::TwinCompletion);
+                    out_push(e1, Cell::Red, Technique::TwinCompletion);
+                }
+            }
+        }
+        let _ = (line, is_row); // addressing handled by caller
+    };
+
+    let width_mask = (1u16 << state.width) - 1;
+    for r in 0..state.height {
+        let (red, blue) = state.board_ref().get_row(r);
+        let filled = red | blue;
+        scan_line(red, blue, filled, width_mask, r, true, false,
+            &mut |i, cell, t| push(r, i, cell, t));
+    }
+    let height_mask = (1u16 << state.height) - 1;
+    for c in 0..state.width {
+        let (red, blue) = state.board_ref().get_col(c);
+        let filled = red | blue;
+        scan_line(red, blue, filled, height_mask, c, false, true,
+            &mut |i, cell, t| push(i, c, cell, t));
+    }
+    out
+}
+
 /// Runs the enabled subset of techniques to fixpoint on `board`.
 ///
 /// Returns a `DeductionTrace` containing every forced cell in order.

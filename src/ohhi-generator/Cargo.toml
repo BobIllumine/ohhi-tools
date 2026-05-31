@@ -7,3 +7,4 @@ edition = "2024"
 ohhi-core = { path = "../ohhi-core" }
 ohhi-solver = { path = "../ohhi-solver" }
 rand = "0.10.1"
+serde = { version = "1.0.228", features = ["derive"] }

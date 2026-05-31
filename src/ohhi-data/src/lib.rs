@@ -6,3 +6,5 @@
 
 pub mod catalog;
 pub mod metrics;
+pub mod patterns;
+pub mod probe;
