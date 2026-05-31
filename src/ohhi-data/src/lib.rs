@@ -5,3 +5,6 @@
 //! | [`catalog`] | Per-line forcing-state enumeration, symmetry reduction, and minimal trigger mining. |
 
 pub mod catalog;
+pub mod metrics;
+pub mod patterns;
+pub mod probe;

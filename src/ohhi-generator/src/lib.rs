@@ -32,6 +32,7 @@
 
 pub mod combos;
 pub mod full;
+pub mod practice;
 pub mod reduce;
 
 use ohhi_core::bit_board::BitBoard;

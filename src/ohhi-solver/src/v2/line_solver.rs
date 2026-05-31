@@ -21,6 +21,17 @@ use ohhi_core::board::Cell;
 /// (`red ⊆ m`) and every fixed blue (`m & blue == 0`), has exactly `n/2` reds,
 /// and contains no three consecutive cells of the same color.
 pub fn legal_completions(red: u16, blue: u16, n: usize) -> Vec<u16> {
+    legal_completions_budget(red, blue, n, n / 2)
+}
+
+/// Like [`legal_completions`] but with an explicit red target instead of the
+/// equity rule's `n/2`. The blue target is implied: `n - target_red`.
+///
+/// This decouples line solving from the even-`n` / balanced assumption so
+/// research probes can sweep arbitrary colour budgets and odd line lengths
+/// (where the standard equity rule doesn't apply). With `target_red == n/2` it
+/// is identical to [`legal_completions`].
+pub fn legal_completions_budget(red: u16, blue: u16, n: usize, target_red: usize) -> Vec<u16> {
     let full = (1 << n) - 1;
     let empties = full & !red & !blue;
     let mut sub = empties;
@@ -29,7 +40,7 @@ pub fn legal_completions(red: u16, blue: u16, n: usize) -> Vec<u16> {
         let m = red | sub;
         let b = full & !m;
         let consec = (m & (m >> 1) & (m >> 2) == 0) && (b & (b >> 1) & (b >> 2) == 0);
-        let balance = m.count_ones() == (n / 2) as u32;
+        let balance = m.count_ones() == target_red as u32;
         if consec && balance {
             res.push(m);
         }
