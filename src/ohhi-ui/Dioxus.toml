@@ -1,0 +1,6 @@
+[application]
+name = "ohhi-ui"
+default_platform = "desktop"
+
+[web.app]
+title = "0h h1 Toolkit"

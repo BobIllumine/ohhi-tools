@@ -6,7 +6,7 @@
 //! the generator's `combos::legal_lines`.
 
 use ohhi_core::board::Cell;
-use ohhi_solver::v2::line_solver::{forced_cells, legal_completions};
+use ohhi_solver::v2::line_solver::{forced_cells, legal_completions, legal_completions_budget};
 
 fn sorted(mut v: Vec<u16>) -> Vec<u16> {
     v.sort();
@@ -151,4 +151,54 @@ fn no_completions_forces_nothing() {
     // A contradicted line (no legal completion) must force nothing, not fabricate
     // cells from the empty intersection.
     assert_eq!(forced_cells(&[], 0, 4), vec![]);
+}
+
+// ── legal_completions_budget (arbitrary red target, any parity) ──────────────
+
+#[test]
+fn budget_matches_balanced_at_half() {
+    // With target = n/2 the budget variant must reproduce the balanced solver.
+    for n in [2usize, 4, 6, 8] {
+        assert_eq!(
+            sorted(legal_completions_budget(0, 0, n, n / 2)),
+            sorted(legal_completions(0, 0, n)),
+            "n={n}"
+        );
+    }
+}
+
+#[test]
+fn budget_allows_odd_lengths() {
+    // n=3, exactly one red: the three single-red masks (no triple possible).
+    assert_eq!(
+        sorted(legal_completions_budget(0, 0, 3, 1)),
+        vec![0b001, 0b010, 0b100]
+    );
+}
+
+#[test]
+fn budget_respects_anti_triple_at_extreme() {
+    // n=3, zero reds → BBB blue triple → no legal completion.
+    assert_eq!(legal_completions_budget(0, 0, 3, 0), Vec::<u16>::new());
+    // n=3, three reds → RRR red triple → none.
+    assert_eq!(legal_completions_budget(0, 0, 3, 3), Vec::<u16>::new());
+}
+
+#[test]
+fn budget_reproduces_scarce_red_forcing() {
+    // Ground truth from the line-atom probe: `R....R` forces its inner neighbours
+    // Blue iff red is the scarce, near-exhausted colour.
+    let r_dot_r = 0b100001u16; // R at 0 and 5
+    // n=6 balanced (3 red): fires at 1,4.
+    let comps = legal_completions_budget(r_dot_r, 0, 6, 3);
+    assert_eq!(forced_cells(&comps, r_dot_r, 6), vec![(1, Cell::Blue), (4, Cell::Blue)]);
+
+    // n=8 balanced (4 red): red has slack → forces nothing.
+    let line8 = r_dot_r; // R....R.. , padding empty
+    let comps = legal_completions_budget(line8, 0, 8, 4);
+    assert_eq!(forced_cells(&comps, line8, 8), vec![]);
+
+    // n=9, red minority (4 red / 5 blue): fires at 1,4 again.
+    let comps = legal_completions_budget(r_dot_r, 0, 9, 4);
+    assert_eq!(forced_cells(&comps, r_dot_r, 9), vec![(1, Cell::Blue), (4, Cell::Blue)]);
 }

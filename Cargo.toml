@@ -1,5 +1,5 @@
 [workspace]
-members = ["src/ohhi-core", "src/bruteforcer", "src/ohhi-solver", "src/ohhi-gui", "src/ohhi-generator", "ohhi-data"]
+members = ["src/ohhi-core", "src/bruteforcer", "src/ohhi-solver", "src/ohhi-generator", "src/ohhi-data", "src/ohhi-app", "src/ohhi-ui"]
 
 [package]
 name = "ohhi-tools"
