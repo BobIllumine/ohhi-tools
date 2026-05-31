@@ -393,7 +393,7 @@ pub fn forced_once(board: &BitBoard, set: TechniqueSet) -> Vec<(usize, usize, Ce
             out.push((r, c, cell, t));
         }
     };
-    let all_bits = |mut m: u16, mut f: &mut dyn FnMut(usize)| {
+    let all_bits = |mut m: u16, f: &mut dyn FnMut(usize)| {
         while m != 0 {
             let i = m.trailing_zeros() as usize;
             f(i);
@@ -403,7 +403,7 @@ pub fn forced_once(board: &BitBoard, set: TechniqueSet) -> Vec<(usize, usize, Ce
 
     // `selection` is one colour's mask; the cells it forces take the OPPOSITE
     // colour. row==true addresses (line, pos); else (pos, line).
-    let mut scan_line = |selection: u16, opp_selection: u16, filled: u16, mask: u16,
+    let scan_line = |selection: u16, opp_selection: u16, filled: u16, mask: u16,
                          line: usize, is_row: bool, is_col_metric: bool,
                          out_push: &mut dyn FnMut(usize, Cell, Technique)| {
         if set.contains(Technique::PairExtension) {

@@ -31,7 +31,7 @@ pub fn PlayView(mut state: Signal<AppState>) -> Element {
     let mut show_result = use_signal(|| false);
 
     let has_game      = state.read().play.is_some();
-    let complete      = state.read().play.as_ref().map(|p| p.is_complete()).unwrap_or(false);
+    let _complete     = state.read().play.as_ref().map(|p| p.is_complete()).unwrap_or(false);
     let elapsed_ms    = state.read().play.as_ref().map(|p| p.elapsed_ms()).unwrap_or(0);
     let mistakes      = state.read().play.as_ref().map(|p| p.mistakes()).unwrap_or(0);
     let guesses       = state.read().play.as_ref().map(|p| p.guesses()).unwrap_or(0);
@@ -57,7 +57,7 @@ pub fn PlayView(mut state: Signal<AppState>) -> Element {
         format!("{} / {}", diff_done, diff_total)
     } else { "—".to_string() };
 
-    let plural  = if mistakes == 1 { "" } else { "s" };
+    let _plural = if mistakes == 1 { "" } else { "s" };
     let is_og   = *gen_mode.read() == GenMode::Og;
     let mut n_buf = use_signal(|| "6".to_string());
 

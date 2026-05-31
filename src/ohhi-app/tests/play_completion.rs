@@ -1,5 +1,5 @@
 use ohhi_app::play::{GenMode, PlaySession};
-use ohhi_app::{AppState, GameRecord};
+use ohhi_app::AppState;
 use ohhi_core::bit_board::BitBoard;
 use ohhi_core::board::Cell;
 

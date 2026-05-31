@@ -496,7 +496,7 @@ struct CheckProps {
 
 #[component]
 fn Check(props: CheckProps) -> Element {
-    let mut state = props.state;
+    let state = props.state;
     let t = props.t;
     let checked = props.techniques.contains(t);
     rsx! {
