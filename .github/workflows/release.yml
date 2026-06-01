@@ -92,8 +92,10 @@ jobs:
       - name: Install dx
         run: cargo binstall dioxus-cli@^0.6 --no-confirm
 
+      # dx 0.6 builds the crate whose Dioxus.toml is in the working directory.
       - name: Build web bundle
-        run: dx build --release --platform web --package ohhi-ui
+        working-directory: src/ohhi-ui
+        run: dx build --release --platform web
 
       - name: Stage web bundle
         run: |

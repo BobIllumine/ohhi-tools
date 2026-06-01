@@ -1,0 +1,80 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Allow the GITHUB_TOKEN to deploy to Pages; only one concurrent deploy.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Project Pages are served from https://<user>.github.io/<repo>/, so assets
+  # must be fetched relative to this sub-path.
+  BASE_PATH: ohhi-tools
+
+jobs:
+  build:
+    name: build web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: pages
+
+      - name: Install dioxus-cli
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install dx (Dioxus 0.6)
+        run: cargo binstall dioxus-cli@^0.6 --no-confirm
+
+      # Project Pages live under /<repo>/, so set the asset base path. Done via
+      # Dioxus.toml's `[web.app] base_path` (works across dx 0.6/0.7) rather than
+      # a CLI flag. `[web.app]` is the last section, so appending lands in it.
+      - name: Set base path
+        working-directory: src/ohhi-ui
+        run: printf '\nbase_path = "%s"\n' "$BASE_PATH" >> Dioxus.toml
+
+      # dx 0.6 builds the crate whose Dioxus.toml is in the working directory
+      # (it doesn't resolve --package against the workspace like dx 0.7 does).
+      - name: Build web bundle
+        working-directory: src/ohhi-ui
+        run: dx build --release --platform web
+
+      - name: Prepare site
+        id: site
+        run: |
+          out="$(find target/dx -type d -name public | head -1)"
+          if [ -z "$out" ]; then echo "::error::no web output dir found"; exit 1; fi
+          touch "$out/.nojekyll"          # don't let Jekyll touch the bundle
+          cp "$out/index.html" "$out/404.html"  # SPA fallback for deep links
+          echo "dir=$out" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.site.outputs.dir }}
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

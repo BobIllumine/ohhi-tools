@@ -21,11 +21,10 @@ const TARGETS: [(Target, &str); 4] = [
 
 #[component]
 pub fn PracticeView(mut state: Signal<AppState>) -> Element {
-    // Background timer: tick every 100 ms (desktop only).
-    #[cfg(not(target_arch = "wasm32"))]
+    // Background timer: tick every 100 ms (desktop + web).
     use_future(move || async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            super::sleep_ms(100).await;
             if let Some(p) = state.write().practice.as_mut() {
                 p.tick(100);
             }

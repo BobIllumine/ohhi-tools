@@ -16,11 +16,10 @@ const INPUT_BG: &str = "#1a1a1a";
 
 #[component]
 pub fn PlayView(mut state: Signal<AppState>) -> Element {
-    // Background timer: tick every 100 ms (desktop only).
-    #[cfg(not(target_arch = "wasm32"))]
+    // Background timer: tick every 100 ms (desktop + web).
     use_future(move || async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            super::sleep_ms(100).await;
             if let Some(p) = state.write().play.as_mut() {
                 p.tick(100);
             }
